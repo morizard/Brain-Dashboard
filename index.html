@@ -595,8 +595,37 @@
 
 <div class="header">
   <div class="logo">🧠 مغزم</div>
-  <div class="date-display" id="headerDate"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="date-display" id="headerDate"></div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button id="sync-btn" onclick="syncToCloud()" style="
+        background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+        padding:7px 12px;cursor:pointer;font-family:Vazirmatn,sans-serif;
+        font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;
+        transition:all 0.2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span id="sync-badge">⚙️</span>
+        <span>سینک</span>
+      </button>
+      <button onclick="syncFromCloud()" style="
+        background:none;border:1px solid var(--border);border-radius:8px;
+        padding:7px 10px;cursor:pointer;font-size:13px;color:var(--text-muted);
+        transition:all 0.2s" title="دریافت از cloud" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">⬇️</button>
+      <button onclick="openSBSettings()" style="
+        background:none;border:1px solid var(--border);border-radius:8px;
+        padding:7px 10px;cursor:pointer;font-size:13px;color:var(--text-muted);
+        transition:all 0.2s" title="تنظیمات cloud" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">⚙️</button>
+    </div>
+  </div>
 </div>
+
+<!-- TOAST -->
+<div id="toast" style="
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 20px;font-size:14px;font-family:Vazirmatn,sans-serif;
+  color:var(--text);z-index:500;opacity:0;transition:all 0.3s;pointer-events:none;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4)
+"></div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('dashboard')">داشبورد</button>
@@ -1462,6 +1491,7 @@ function renderTodos() {
           </div>
         </div>
         <button class="delete-btn" onclick="openEditTodo(${t.id})" style="color:var(--text-muted);font-size:14px" title="ویرایش">✏️</button>
+        ${t.dueDate ? `<button class="delete-btn" onclick="addTodoToGCal(${t.id})" title="اضافه به Google Calendar" style="color:var(--blue);font-size:14px">📅</button>` : ''}
         <button class="delete-btn" onclick="deleteTodo(${t.id})">✕</button>
       </div>
     `).join('');
@@ -1601,7 +1631,10 @@ function renderGoals() {
           <span class="horizon-badge ${horizonClass[h]}">${horizonLabel[h]}</span>
           <span class="priority-flag ${priorityClass[p]}">${priorityLabel[p]}</span>
         </div>
-        <button class="delete-btn" onclick="deleteGoal(${g.id})">✕</button>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${g.deadline ? `<button class="delete-btn" onclick="addGoalToGCal(${g.id})" title="اضافه deadline به Google Calendar" style="color:var(--blue);font-size:14px">📅</button>` : ''}
+          <button class="delete-btn" onclick="deleteGoal(${g.id})">✕</button>
+        </div>
       </div>
       ${g.deadline ? `<div class="goal-deadline">📅 مهلت: ${displayDate(g.deadline)}</div>` : ''}
       ${g.notes ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${g.notes}</div>` : ''}
@@ -1850,7 +1883,10 @@ function renderMeetings() {
       <div class="meeting-item">
         <div class="section-header" style="margin:0">
           <div class="meeting-title">${m.title}</div>
-          <button class="delete-btn" onclick="deleteMeeting(${m.id})">✕</button>
+          <div style="display:flex;gap:4px">
+            <button class="delete-btn" onclick="addMeetingToGCal(${m.id})" title="اضافه به Google Calendar" style="color:var(--blue);font-size:14px">📅</button>
+            <button class="delete-btn" onclick="deleteMeeting(${m.id})">✕</button>
+          </div>
         </div>
         <div class="meeting-meta">
           📅 ${displayDate(m.date)} ${m.time ? '• ⏰ '+m.time : ''}
@@ -2382,7 +2418,7 @@ function openModal(type) {
       </div>
       <div class="form-group">
         <label class="form-label">یادداشت</label>
-        <textarea id="m-meet-notes" placeholder="نکته، نکات مهم..." style="min-height:80px"></textarea>
+        <textarea id="m-meet-notes" placeholder="آجندا، نکات مهم..." style="min-height:80px"></textarea>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" onclick="submitMeeting()">ذخیره</button>
@@ -2422,6 +2458,241 @@ document.getElementById('modal').addEventListener('click', e => {
   if (e.target === document.getElementById('modal')) closeModal();
 });
 
+// ─── GOOGLE CALENDAR EXPORT ──────────────────────────────────────────────────
+// Convert jalali key (YYYY-MM-DD) + optional time (HH:MM) to Google Calendar date strings
+function jalaliKeyToGCal(key, time) {
+  const [jy,jm,jd] = key.split('-').map(Number);
+  const [gy,gm,gd] = J.toGregorian(jy,jm,jd);
+  const pad = n => String(n).padStart(2,'0');
+  if (time) {
+    const [h,mi] = time.split(':').map(Number);
+    // Format: YYYYMMDDTHHmmss
+    const start = `${gy}${pad(gm)}${pad(gd)}T${pad(h)}${pad(mi)}00`;
+    // Default 1 hour duration
+    const endH = h + 1;
+    const end = `${gy}${pad(gm)}${pad(gd)}T${pad(endH < 24 ? endH : 23)}${pad(mi)}00`;
+    return { dates: `${start}/${end}` };
+  } else {
+    // All-day: YYYYMMDD/YYYYMMDD (same day)
+    const dateStr = `${gy}${pad(gm)}${pad(gd)}`;
+    // next day for end
+    const endDate = new Date(gy, gm-1, gd+1);
+    const endStr = `${endDate.getFullYear()}${pad(endDate.getMonth()+1)}${pad(endDate.getDate())}`;
+    return { dates: `${dateStr}/${endStr}` };
+  }
+}
+
+function openInGCal(title, key, time, details='', location='') {
+  try {
+    const { dates } = jalaliKeyToGCal(key, time);
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title,
+      dates: dates,
+      details: details,
+      location: location
+    });
+    window.open('https://calendar.google.com/calendar/render?' + params.toString(), '_blank');
+  } catch(e) {
+    alert('تاریخ معتبر نیست!');
+  }
+}
+
+function addMeetingToGCal(id) {
+  const m = state.meetings.find(m => m.id === id);
+  if (!m) return;
+  const details = [m.notes, m.with ? 'با: ' + m.with : ''].filter(Boolean).join('\n');
+  openInGCal(m.title, m.date, m.time, details);
+}
+
+function addTodoToGCal(id) {
+  const t = state.todos.find(t => t.id === id);
+  if (!t || !t.dueDate) { alert('این کار تاریخ سررسید نداره!'); return; }
+  const details = t.tag ? 'برچسب: ' + t.tag : '';
+  openInGCal('✅ ' + t.text, t.dueDate, t.dueTime, details);
+}
+
+function addGoalToGCal(id) {
+  const g = state.goals.find(g => g.id === id);
+  if (!g || !g.deadline) { alert('این هدف deadline نداره!'); return; }
+  const details = g.notes || '';
+  openInGCal('🎯 ' + g.title, g.deadline, '', details);
+}
+
+// ─── SUPABASE SYNC ────────────────────────────────────────────────────────────
+let SUPABASE_URL = localStorage.getItem('sb_url') || '';
+let SUPABASE_KEY = localStorage.getItem('sb_key') || '';
+let syncStatus = 'idle'; // idle | syncing | ok | error
+
+function isSBConfigured() { return SUPABASE_URL && SUPABASE_KEY; }
+
+async function sbRequest(method, path, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.status === 204 ? null : res.json();
+}
+
+async function syncToCloud() {
+  if (!isSBConfigured()) { openSBSettings(); return; }
+  setSyncStatus('syncing');
+  try {
+    const payload = {
+      id: 'default',
+      todos: JSON.stringify(state.todos),
+      goals: JSON.stringify(state.goals),
+      wishes: JSON.stringify(state.wishes),
+      meetings: JSON.stringify(state.meetings),
+      journal: JSON.stringify(state.journal),
+      updated_at: new Date().toISOString()
+    };
+    await sbRequest('POST', 'brain_data', payload);
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('Sync error:', e);
+    setSyncStatus('error');
+  }
+}
+
+async function syncFromCloud() {
+  if (!isSBConfigured()) { openSBSettings(); return; }
+  setSyncStatus('syncing');
+  try {
+    const data = await sbRequest('GET', 'brain_data?id=eq.default&select=*');
+    if (!data || !data.length) {
+      setSyncStatus('error');
+      alert('هیچ دیتایی در cloud نیست. اول یه بار آپلود کن.');
+      return;
+    }
+    const row = data[0];
+    ['todos','goals','wishes','meetings','journal'].forEach(k => {
+      try { state[k] = JSON.parse(row[k]) || []; } catch(e) { state[k] = []; }
+      save(k);
+    });
+    renderAll();
+    setSyncStatus('ok');
+    showToast('✅ دیتا از cloud بارگذاری شد!');
+  } catch(e) {
+    console.error('Fetch error:', e);
+    setSyncStatus('error');
+    alert('خطا در دریافت دیتا: ' + e.message);
+  }
+}
+
+function setSyncStatus(s) {
+  syncStatus = s;
+  const btn = document.getElementById('sync-btn');
+  const badge = document.getElementById('sync-badge');
+  if (!btn || !badge) return;
+  if (s === 'syncing') {
+    badge.textContent = '⏳';
+    badge.style.color = 'var(--accent)';
+    btn.disabled = true;
+  } else if (s === 'ok') {
+    badge.textContent = '☁️';
+    badge.style.color = 'var(--green)';
+    btn.disabled = false;
+    showToast('✅ آپلود موفق!');
+  } else if (s === 'error') {
+    badge.textContent = '⚠️';
+    badge.style.color = 'var(--red)';
+    btn.disabled = false;
+  } else {
+    badge.textContent = isSBConfigured() ? '☁️' : '⚙️';
+    badge.style.color = isSBConfigured() ? 'var(--text-muted)' : 'var(--accent)';
+    btn.disabled = false;
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateY(0)';
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(20px)';
+  }, 2500);
+}
+
+function openSBSettings() {
+  const content = document.getElementById('modal-content');
+  content.innerHTML = `
+    <div class="modal-title">☁️ تنظیمات Supabase</div>
+    <div style="background:rgba(124,111,205,0.08);border:1px solid rgba(124,111,205,0.3);border-radius:10px;padding:14px;margin-bottom:18px;font-size:13px;line-height:1.8;color:var(--text-muted)">
+      <div style="font-weight:700;color:var(--accent2);margin-bottom:6px">📋 راهنمای سریع:</div>
+      <div>۱. به <a href="https://supabase.com" target="_blank" style="color:var(--accent)">supabase.com</a> برو و اکانت بساز</div>
+      <div>۲. یه project جدید بساز (رایگانه)</div>
+      <div>۳. از منوی <b>Project Settings → API</b> آدرس و کلید رو کپی کن</div>
+      <div>۴. توی <b>SQL Editor</b> این دستور رو اجرا کن:</div>
+      <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-top:8px;font-family:monospace;font-size:11px;color:var(--text);direction:ltr;text-align:left;white-space:pre-wrap">CREATE TABLE brain_data (
+  id TEXT PRIMARY KEY,
+  todos TEXT, goals TEXT,
+  wishes TEXT, meetings TEXT,
+  journal TEXT,
+  updated_at TIMESTAMPTZ
+);</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project URL</label>
+      <input type="text" id="sb-url-input" value="${SUPABASE_URL}" placeholder="https://xxxxxxxxxxxx.supabase.co" style="width:100%;direction:ltr;font-size:13px">
+    </div>
+    <div class="form-group">
+      <label class="form-label">anon public key</label>
+      <input type="text" id="sb-key-input" value="${SUPABASE_KEY}" placeholder="eyJhbGciOiJI..." style="width:100%;direction:ltr;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveSBSettings()">ذخیره و تست</button>
+      <button class="btn btn-ghost" onclick="closeModal()">انصراف</button>
+      ${isSBConfigured() ? '<button class="btn btn-ghost" style="color:var(--red)" onclick="clearSBSettings()">حذف تنظیمات</button>' : ''}
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+async function saveSBSettings() {
+  const url = document.getElementById('sb-url-input').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('sb-key-input').value.trim();
+  if (!url || !key) { alert('هر دو فیلد رو پر کن!'); return; }
+  SUPABASE_URL = url;
+  SUPABASE_KEY = key;
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  closeModal();
+  setSyncStatus('idle');
+  showToast('⚙️ در حال تست اتصال...');
+  // test connection
+  try {
+    await sbRequest('GET', 'brain_data?limit=1');
+    showToast('✅ اتصال برقرار شد!');
+    setSyncStatus('idle');
+  } catch(e) {
+    showToast('❌ خطا در اتصال — تنظیمات رو چک کن');
+    setSyncStatus('error');
+  }
+}
+
+function clearSBSettings() {
+  SUPABASE_URL = ''; SUPABASE_KEY = '';
+  localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key');
+  closeModal(); setSyncStatus('idle');
+}
+
+// Override save to also auto-push if configured
+const _origSave = save;
+function save(key) {
+  _origSave(key);
+}
+
 // ─── RENDER ALL ──────────────────────────────────────────────────────────────
 function renderAll() {
   renderJournal();
@@ -2437,6 +2708,7 @@ load();
 initDates();
 buildWeekGrid();
 renderAll();
+setSyncStatus('idle');
 </script>
 </body>
 </html>
