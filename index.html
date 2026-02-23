@@ -2687,12 +2687,6 @@ function clearSBSettings() {
   closeModal(); setSyncStatus('idle');
 }
 
-// Override save to also auto-push if configured
-const _origSave = save;
-function save(key) {
-  _origSave(key);
-}
-
 // ─── RENDER ALL ──────────────────────────────────────────────────────────────
 function renderAll() {
   renderJournal();
