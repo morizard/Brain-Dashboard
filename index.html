@@ -547,7 +547,84 @@
   .emoji-btn:hover { border-color: var(--accent); transform: scale(1.15); background: rgba(200,169,110,0.1); }
   .emoji-btn.selected { border-color: var(--accent); background: rgba(200,169,110,0.15); }
 
-  ::-webkit-scrollbar { width: 5px; }
+  /* IDEAS */
+  .idea-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+  }
+  .idea-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .idea-card.pinned { border-color: var(--accent); background: rgba(200,169,110,0.05); }
+  .idea-status-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .is-new    { color: #5b9cf6; border-color: #5b9cf6; background: rgba(91,156,246,0.1); }
+  .is-wip    { color: #c8a96e; border-color: #c8a96e; background: rgba(200,169,110,0.1); }
+  .is-done   { color: #4caf7d; border-color: #4caf7d; background: rgba(76,175,125,0.1); }
+  .idea-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    margin-left: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .idea-tag:hover { border-color: var(--accent); color: var(--accent); }
+  .idea-color-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  .idea-search-bar {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+    direction: rtl;
+  }
+  .idea-search-bar:focus { border-color: var(--accent); }
+  .idea-filter-btn {
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .idea-filter-btn:hover { color: var(--text); border-color: var(--text-muted); }
+  .idea-filter-btn.active { background: rgba(200,169,110,0.15); color: var(--accent); border-color: var(--accent); }
+  .idea-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 6px;
+    white-space: pre-wrap;
+  }
+
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 
@@ -634,6 +711,7 @@
   <button class="tab" onclick="switchTab('goals')">اهداف</button>
   <button class="tab" onclick="switchTab('wishes')">آرزوها</button>
   <button class="tab" onclick="switchTab('meetings')">جلسات</button>
+  <button class="tab" onclick="switchTab('ideas')">💡 ایده‌ها</button>
 </div>
 
 <div class="main">
@@ -848,6 +926,78 @@
     </div>
   </div>
 
+  <!-- IDEAS -->
+  <div class="page" id="page-ideas">
+
+    <!-- Stats row -->
+    <div id="ideas-stats-row" style="margin-bottom:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
+
+    <!-- Add new idea -->
+    <div class="card" id="ideas-add-card">
+      <div class="section-header" style="margin-bottom:14px">
+        <div class="section-title">💡 ایده جدید</div>
+      </div>
+      <div class="form-group">
+        <input type="text" id="idea-title-input" placeholder="عنوان ایده..." style="width:100%;font-size:15px" onkeydown="if(event.key==='Enter')saveNewIdea()">
+      </div>
+      <div class="form-group">
+        <textarea id="idea-desc-input" placeholder="توضیحات بیشتر... (اختیاری)" style="min-height:70px;width:100%"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <select id="idea-cat-select" style="min-width:130px">
+          <option value="کار">💼 کار</option>
+          <option value="شخصی">🙋 شخصی</option>
+          <option value="پروژه">🚀 پروژه</option>
+          <option value="محصول">📦 محصول</option>
+          <option value="آموزش">📚 آموزش</option>
+          <option value="دیگر">💬 دیگر</option>
+        </select>
+        <select id="idea-priority-select">
+          <option value="high">🔴 مهم</option>
+          <option value="mid" selected>🟡 معمولی</option>
+          <option value="low">⚪ عادی</option>
+        </select>
+        <input type="text" id="idea-tags-input" placeholder="برچسب‌ها (با ویرگول)" style="flex:1;min-width:130px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:12px;color:var(--text-muted)">رنگ:</span>
+          <div id="idea-color-picker" style="display:flex;gap:4px">
+            <button class="idea-color-swatch active" data-color="#c8a96e" onclick="selectIdeaColor('#c8a96e',this)" style="width:22px;height:22px;border-radius:50%;background:#c8a96e;border:2px solid white;cursor:pointer"></button>
+            <button class="idea-color-swatch" data-color="#5b9cf6" onclick="selectIdeaColor('#5b9cf6',this)" style="width:22px;height:22px;border-radius:50%;background:#5b9cf6;border:2px solid transparent;cursor:pointer"></button>
+            <button class="idea-color-swatch" data-color="#4caf7d" onclick="selectIdeaColor('#4caf7d',this)" style="width:22px;height:22px;border-radius:50%;background:#4caf7d;border:2px solid transparent;cursor:pointer"></button>
+            <button class="idea-color-swatch" data-color="#e05555" onclick="selectIdeaColor('#e05555',this)" style="width:22px;height:22px;border-radius:50%;background:#e05555;border:2px solid transparent;cursor:pointer"></button>
+            <button class="idea-color-swatch" data-color="#7c6fcd" onclick="selectIdeaColor('#7c6fcd',this)" style="width:22px;height:22px;border-radius:50%;background:#7c6fcd;border:2px solid transparent;cursor:pointer"></button>
+            <button class="idea-color-swatch" data-color="#888" onclick="selectIdeaColor('#888',this)" style="width:22px;height:22px;border-radius:50%;background:#888;border:2px solid transparent;cursor:pointer"></button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveNewIdea()">+ ذخیره ایده</button>
+    </div>
+
+    <!-- Search & filter -->
+    <div class="card" style="padding:14px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input class="idea-search-bar" id="idea-search" placeholder="🔍 جستجو در ایده‌ها..." oninput="renderIdeas()">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="idea-filter-btn active" data-filter="all" onclick="setIdeaFilter('all',this)">همه</button>
+        <button class="idea-filter-btn" data-filter="pinned" onclick="setIdeaFilter('pinned',this)">📌 پین‌شده</button>
+        <button class="idea-filter-btn" data-filter="new" onclick="setIdeaFilter('new',this)">🆕 بررسی نشده</button>
+        <button class="idea-filter-btn" data-filter="wip" onclick="setIdeaFilter('wip',this)">⚙️ در جریان</button>
+        <button class="idea-filter-btn" data-filter="done" onclick="setIdeaFilter('done',this)">✅ انجام شد</button>
+        <button class="idea-filter-btn" data-filter="high" onclick="setIdeaFilter('high',this)">🔴 مهم</button>
+        <span style="width:1px;background:var(--border);margin:0 2px"></span>
+        <button class="idea-filter-btn" data-cat="کار" onclick="setIdeaFilterCat('کار',this)">💼 کار</button>
+        <button class="idea-filter-btn" data-cat="شخصی" onclick="setIdeaFilterCat('شخصی',this)">🙋 شخصی</button>
+        <button class="idea-filter-btn" data-cat="پروژه" onclick="setIdeaFilterCat('پروژه',this)">🚀 پروژه</button>
+        <button class="idea-filter-btn" data-cat="محصول" onclick="setIdeaFilterCat('محصول',this)">📦 محصول</button>
+        <button class="idea-filter-btn" data-cat="آموزش" onclick="setIdeaFilterCat('آموزش',this)">📚 آموزش</button>
+      </div>
+    </div>
+
+    <!-- Ideas list -->
+    <div id="ideas-list"></div>
+  </div>
+
   <!-- MEETINGS -->
   <div class="page" id="page-meetings">
     <div class="card">
@@ -969,14 +1119,15 @@ const state = {
   goals: [],
   wishes: [],
   meetings: [],
-  journal: []
+  journal: [],
+  ideas: []
 };
 
 let selectedMood = '';
 
 // Load from localStorage
 function load() {
-  ['todos','goals','wishes','meetings','journal'].forEach(k => {
+  ['todos','goals','wishes','meetings','journal','ideas'].forEach(k => {
     try { state[k] = JSON.parse(localStorage.getItem('brain_'+k)) || []; } catch(e) { state[k] = []; }
   });
 }
@@ -1025,7 +1176,7 @@ function switchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
-  const tabs = ['dashboard','journal','todos','goals','wishes','meetings'];
+  const tabs = ['dashboard','journal','todos','goals','wishes','meetings','ideas'];
   document.querySelectorAll('.tab')[tabs.indexOf(tab)].classList.add('active');
   renderAll();
 }
@@ -2554,6 +2705,7 @@ async function syncToCloud() {
       wishes: JSON.stringify(state.wishes),
       meetings: JSON.stringify(state.meetings),
       journal: JSON.stringify(state.journal),
+      ideas: JSON.stringify(state.ideas),
       updated_at: new Date().toISOString()
     };
     await sbRequest('POST', 'brain_data', payload);
@@ -2575,7 +2727,7 @@ async function syncFromCloud() {
       return;
     }
     const row = data[0];
-    ['todos','goals','wishes','meetings','journal'].forEach(k => {
+    ['todos','goals','wishes','meetings','journal','ideas'].forEach(k => {
       try { state[k] = JSON.parse(row[k]) || []; } catch(e) { state[k] = []; }
       save(k);
     });
@@ -2689,13 +2841,260 @@ function clearSBSettings() {
   closeModal(); setSyncStatus('idle');
 }
 
-// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+// ─── IDEAS ───────────────────────────────────────────────────────────────────
+let selectedIdeaColor = '#c8a96e';
+let ideaFilter = 'all';
+let ideaCatFilter = '';
+
+function selectIdeaColor(color, btn) {
+  selectedIdeaColor = color;
+  document.querySelectorAll('#idea-color-picker .idea-color-swatch').forEach(b => b.style.border = '2px solid transparent');
+  btn.style.border = '2px solid white';
+}
+
+function setIdeaFilter(f, btn) {
+  ideaFilter = f;
+  ideaCatFilter = '';
+  document.querySelectorAll('.idea-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIdeas();
+}
+
+function setIdeaFilterCat(cat, btn) {
+  ideaFilter = 'all';
+  ideaCatFilter = (ideaCatFilter === cat) ? '' : cat;
+  document.querySelectorAll('.idea-filter-btn').forEach(b => b.classList.remove('active'));
+  if (ideaCatFilter) btn.classList.add('active');
+  else document.querySelector('.idea-filter-btn[data-filter="all"]').classList.add('active');
+  renderIdeas();
+}
+
+function saveNewIdea() {
+  const title = document.getElementById('idea-title-input').value.trim();
+  if (!title) return;
+  const desc = document.getElementById('idea-desc-input').value.trim();
+  const cat = document.getElementById('idea-cat-select').value;
+  const priority = document.getElementById('idea-priority-select').value;
+  const tagsRaw = document.getElementById('idea-tags-input').value.trim();
+  const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  
+  const idea = {
+    id: Date.now(),
+    title,
+    desc,
+    cat,
+    priority,
+    tags,
+    color: selectedIdeaColor,
+    status: 'new', // new | wip | done
+    pinned: false
+  };
+  
+  state.ideas.unshift(idea);
+  save('ideas');
+  document.getElementById('idea-title-input').value = '';
+  document.getElementById('idea-desc-input').value = '';
+  document.getElementById('idea-tags-input').value = '';
+  renderIdeas();
+  updateStats();
+}
+
+function toggleIdeaPin(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (idea) { idea.pinned = !idea.pinned; save('ideas'); renderIdeas(); }
+}
+
+function cycleIdeaStatus(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (!idea) return;
+  const cycle = { 'new': 'wip', 'wip': 'done', 'done': 'new' };
+  idea.status = cycle[idea.status] || 'new';
+  save('ideas'); renderIdeas(); updateStats();
+}
+
+function deleteIdea(id) {
+  state.ideas = state.ideas.filter(i => i.id !== id);
+  save('ideas'); renderIdeas(); updateStats();
+}
+
+function openEditIdea(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (!idea) return;
+  selectedIdeaColor = idea.color || '#c8a96e';
+  const cats = ['کار','شخصی','پروژه','محصول','آموزش','دیگر'];
+  const catEmojis = { 'کار':'💼','شخصی':'🙋','پروژه':'🚀','محصول':'📦','آموزش':'📚','دیگر':'💬' };
+  const colors = ['#c8a96e','#5b9cf6','#4caf7d','#e05555','#7c6fcd','#888'];
+  
+  const content = document.getElementById('modal-content');
+  content.innerHTML = `
+    <div class="modal-title">✏️ ویرایش ایده</div>
+    <div class="form-group">
+      <label class="form-label">عنوان *</label>
+      <input type="text" id="edit-idea-title" value="${idea.title.replace(/"/g,'&quot;')}" style="width:100%">
+    </div>
+    <div class="form-group">
+      <label class="form-label">توضیحات</label>
+      <textarea id="edit-idea-desc" style="min-height:80px;width:100%">${idea.desc||''}</textarea>
+    </div>
+    <div class="grid-2" style="gap:10px;margin-bottom:14px">
+      <div>
+        <label class="form-label">دسته‌بندی</label>
+        <select id="edit-idea-cat" style="width:100%">
+          ${cats.map(c => `<option value="${c}" ${idea.cat===c?'selected':''}>${catEmojis[c]} ${c}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">اولویت</label>
+        <select id="edit-idea-priority" style="width:100%">
+          <option value="high" ${idea.priority==='high'?'selected':''}>🔴 مهم</option>
+          <option value="mid" ${idea.priority==='mid'?'selected':''}>🟡 معمولی</option>
+          <option value="low" ${idea.priority==='low'?'selected':''}>⚪ عادی</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">برچسب‌ها (با ویرگول جدا کن)</label>
+      <input type="text" id="edit-idea-tags" value="${(idea.tags||[]).join(', ')}" style="width:100%" placeholder="مثلاً: React, مهم, هفته آینده">
+    </div>
+    <div class="form-group">
+      <label class="form-label">رنگ</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${colors.map(c => `<button class="idea-color-swatch" data-color="${c}" onclick="selectIdeaColor('${c}',this);document.querySelectorAll('#modal .idea-color-swatch').forEach(b=>b.style.border='2px solid transparent');this.style.border='2px solid white'" style="width:24px;height:24px;border-radius:50%;background:${c};border:${c===selectedIdeaColor?'2px solid white':'2px solid transparent'};cursor:pointer"></button>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary" onclick="saveEditIdea(${id})">ذخیره</button>
+      <button class="btn btn-ghost" onclick="closeModal()">انصراف</button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function saveEditIdea(id) {
+  const idea = state.ideas.find(i => i.id === id);
+  if (!idea) return;
+  const title = document.getElementById('edit-idea-title').value.trim();
+  if (!title) return;
+  idea.title = title;
+  idea.desc = document.getElementById('edit-idea-desc').value.trim();
+  idea.cat = document.getElementById('edit-idea-cat').value;
+  idea.priority = document.getElementById('edit-idea-priority').value;
+  const tagsRaw = document.getElementById('edit-idea-tags').value.trim();
+  idea.tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  idea.color = selectedIdeaColor;
+  save('ideas');
+  closeModal();
+  renderIdeas();
+}
+
+function renderIdeas() {
+  const list = document.getElementById('ideas-list');
+  if (!list) return;
+
+  // Stats
+  const statsRow = document.getElementById('ideas-stats-row');
+  if (statsRow) {
+    const all = state.ideas;
+    const newC = all.filter(i => i.status === 'new').length;
+    const wipC = all.filter(i => i.status === 'wip').length;
+    const doneC = all.filter(i => i.status === 'done').length;
+    const pinnedC = all.filter(i => i.pinned).length;
+    statsRow.innerHTML = [
+      { num: all.length,   label: 'کل ایده‌ها',      color: 'var(--text)' },
+      { num: newC,         label: '🆕 بررسی نشده',   color: '#5b9cf6' },
+      { num: wipC,         label: '⚙️ در جریان',      color: 'var(--accent)' },
+      { num: doneC,        label: '✅ انجام شد',       color: '#4caf7d' },
+    ].map(s => `
+      <div class="stat-box" style="padding:12px">
+        <div class="stat-num" style="font-size:24px;color:${s.color}">${s.num}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>
+    `).join('');
+  }
+
+  const search = (document.getElementById('idea-search')?.value || '').trim().toLowerCase();
+  const statusLabels = { new: 'بررسی نشده', wip: 'در جریان', done: 'انجام شد' };
+  const statusClasses = { new: 'is-new', wip: 'is-wip', done: 'is-done' };
+  const priorityIcon = { high: '🔴', mid: '🟡', low: '⚪' };
+  const catEmoji = { 'کار':'💼','شخصی':'🙋','پروژه':'🚀','محصول':'📦','آموزش':'📚','دیگر':'💬' };
+
+  let items = [...state.ideas];
+
+  // Filter by status/priority
+  if (ideaFilter === 'pinned') items = items.filter(i => i.pinned);
+  else if (ideaFilter === 'new') items = items.filter(i => i.status === 'new');
+  else if (ideaFilter === 'wip') items = items.filter(i => i.status === 'wip');
+  else if (ideaFilter === 'done') items = items.filter(i => i.status === 'done');
+  else if (ideaFilter === 'high') items = items.filter(i => i.priority === 'high');
+
+  // Filter by category
+  if (ideaCatFilter) items = items.filter(i => i.cat === ideaCatFilter);
+
+  // Search
+  if (search) {
+    items = items.filter(i =>
+      i.title.toLowerCase().includes(search) ||
+      (i.desc||'').toLowerCase().includes(search) ||
+      (i.tags||[]).some(t => t.toLowerCase().includes(search)) ||
+      i.cat.toLowerCase().includes(search)
+    );
+  }
+
+  // Sort: pinned first, then by priority, then id (newest)
+  const prioOrder = { high: 0, mid: 1, low: 2 };
+  items.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    if ((prioOrder[a.priority]||1) !== (prioOrder[b.priority]||1)) return (prioOrder[a.priority]||1) - (prioOrder[b.priority]||1);
+    return b.id - a.id;
+  });
+
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-emoji">💡</div>ایده‌ای پیدا نشد</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(idea => {
+    const color = idea.color || '#c8a96e';
+    const tagsHtml = (idea.tags||[]).map(t =>
+      `<span class="idea-tag" onclick="document.getElementById('idea-search').value='${t}';renderIdeas()">${t}</span>`
+    ).join('');
+    
+    return `
+      <div class="idea-card ${idea.pinned ? 'pinned' : ''}" style="border-right: 3px solid ${color}">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <span style="font-size:15px;font-weight:700;color:var(--text)">${idea.title}</span>
+              ${idea.pinned ? '<span style="font-size:13px">📌</span>' : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:${idea.desc?'8px':'0'}">
+              <span class="idea-status-badge ${statusClasses[idea.status]||'is-new'}">${statusLabels[idea.status]||'بررسی نشده'}</span>
+              <span style="font-size:12px;color:var(--text-muted)">${catEmoji[idea.cat]||''} ${idea.cat}</span>
+              <span style="font-size:12px">${priorityIcon[idea.priority]||'🟡'}</span>
+              ${tagsHtml}
+            </div>
+            ${idea.desc ? `<div class="idea-desc">${idea.desc.replace(/</g,'&lt;')}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            <button onclick="toggleIdeaPin(${idea.id})" title="${idea.pinned?'برداشتن پین':'پین کردن'}" style="background:none;border:none;cursor:pointer;font-size:15px;padding:3px;opacity:${idea.pinned?1:0.4};transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='${idea.pinned?1:0.4}'">📌</button>
+            <button onclick="cycleIdeaStatus(${idea.id})" title="تغییر وضعیت" class="delete-btn" style="font-size:14px">🔄</button>
+            <button onclick="openEditIdea(${idea.id})" title="ویرایش" class="delete-btn" style="font-size:14px">✏️</button>
+            <button onclick="deleteIdea(${idea.id})" class="delete-btn">✕</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
 function renderAll() {
   renderJournal();
   renderTodos();
   renderGoals();
   renderWishes();
   renderMeetings();
+  renderIdeas();
   updateStats();
 }
 
