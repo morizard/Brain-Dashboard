@@ -830,8 +830,11 @@
     white-space: pre-wrap;
   }
 
+  ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  body::-webkit-scrollbar { display: none; }
+  body { scrollbar-width: none; -ms-overflow-style: none; }
 
   @media (max-width: 640px) {
     .main { padding: 20px 16px; }
@@ -3161,13 +3164,15 @@ function openSBSettings() {
       <div>۲. یه project جدید بساز (رایگانه)</div>
       <div>۳. از منوی <b>Project Settings → API</b> آدرس و کلید رو کپی کن</div>
       <div>۴. توی <b>SQL Editor</b> این دستور رو اجرا کن:</div>
-      <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-top:8px;font-family:monospace;font-size:11px;color:var(--text);direction:ltr;text-align:left;white-space:pre-wrap">CREATE TABLE brain_data (
+      <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-top:8px;font-family:monospace;font-size:11px;color:var(--text);direction:ltr;text-align:left;white-space:pre-wrap">CREATE TABLE IF NOT EXISTS brain_data (
   id TEXT PRIMARY KEY,
   todos TEXT, goals TEXT,
   wishes TEXT, meetings TEXT,
-  journal TEXT,
+  journal TEXT, ideas TEXT,
   updated_at TIMESTAMPTZ
-);</div>
+);
+-- اگه جدول قبلاً داری، این رو هم اجرا کن:
+ALTER TABLE brain_data ADD COLUMN IF NOT EXISTS ideas TEXT;</div>
     </div>
     <div class="form-group">
       <label class="form-label">Project URL</label>
